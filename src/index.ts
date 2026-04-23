@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { generateObject, generateText, jsonSchema } from 'ai';
+import { generateText } from 'ai';
 
 const INTERACTION_ID_HEADER = 'X-Interaction-Id';
 
