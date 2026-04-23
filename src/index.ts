@@ -128,6 +128,31 @@ export default {
 
 				return Response.json(result.object);
 			}
+			case 'BASIC_TOOL_CALL': {
+				if (!env.DEV_SHOWDOWN_API_KEY) {
+					throw new Error('DEV_SHOWDOWN_API_KEY is required');
+				}
+				const workshopLlm = createWorkshopLlm(env.DEV_SHOWDOWN_API_KEY, interactionId);
+				const city = await generateText({
+					model: workshopLlm.chatModel('deli-4'),
+					system: 'Respond with only the city name from the question. No other words, no punctuation.',
+					prompt: payload.question,
+				});
+
+				const weatherResponse = await fetch('https://devshowdown.com/api/weather', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						[INTERACTION_ID_HEADER]: interactionId,
+					},
+					body: JSON.stringify({ city: city.text }),
+				});
+				const weather = await weatherResponse.json<{ temperature: number | string }>();
+
+				return Response.json({
+					answer: `The weather in ${city.text} is currently ${weather.temperature}.`,
+				});
+			}
 				default:
 					return new Response('Solver not found', { status: 404 });
 			}
