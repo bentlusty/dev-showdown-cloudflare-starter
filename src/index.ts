@@ -70,12 +70,16 @@ export default {
 				const workshopLlm = createWorkshopLlm(env.DEV_SHOWDOWN_API_KEY, interactionId);
 				const result = await generateObject({
 					model: workshopLlm.chatModel('deli-4'),
+					system: 'Extract product data from the description into the schema. Map units and currencies to their canonical codes.',
 					schema: jsonSchema({
 						type: 'object',
 						properties: {
 							name: { type: 'string' },
 							price: { type: 'number' },
-							currency: { type: 'string' },
+							currency: {
+								type: 'string',
+								enum: ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK', 'BRL', 'CNY'],
+							},
 							inStock: { type: 'boolean' },
 							dimensions: {
 								type: 'object',
@@ -83,8 +87,9 @@ export default {
 									length: { type: 'number' },
 									width: { type: 'number' },
 									height: { type: 'number' },
-									unit: { type: 'string' },
+									unit: { type: 'string', enum: ['cm', 'in', 'mm'] },
 								},
+								required: ['length', 'width', 'height', 'unit'],
 							},
 							manufacturer: {
 								type: 'object',
@@ -93,16 +98,19 @@ export default {
 									country: { type: 'string' },
 									website: { type: 'string' },
 								},
+								required: ['name', 'country', 'website'],
 							},
 							specifications: {
 								type: 'object',
 								properties: {
 									weight: { type: 'number' },
-									weightUnit: { type: 'string' },
+									weightUnit: { type: 'string', enum: ['kg', 'lb', 'g'] },
 									warrantyMonths: { type: 'number' },
 								},
+								required: ['weight', 'weightUnit', 'warrantyMonths'],
 							},
 						},
+						required: ['name', 'price', 'currency', 'inStock', 'dimensions', 'manufacturer', 'specifications'],
 					}),
 					prompt: payload.description,
 				});
