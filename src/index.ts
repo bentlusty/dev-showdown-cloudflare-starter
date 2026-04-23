@@ -63,6 +63,11 @@ export default {
 					answer: result.text || 'N/A',
 				});
 			}
+			case 'JSON_MODE': {
+				if (!env.DEV_SHOWDOWN_API_KEY) {
+					throw new Error('DEV_SHOWDOWN_API_KEY is required');
+				}
+			}
 				default:
 					return new Response('Solver not found', { status: 404 });
 			}
