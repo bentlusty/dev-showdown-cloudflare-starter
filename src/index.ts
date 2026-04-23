@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { generateText } from 'ai';
+import { generateObject, generateText, jsonSchema } from 'ai';
 
 const INTERACTION_ID_HEADER = 'X-Interaction-Id';
 
@@ -67,6 +67,47 @@ export default {
 				if (!env.DEV_SHOWDOWN_API_KEY) {
 					throw new Error('DEV_SHOWDOWN_API_KEY is required');
 				}
+				const workshopLlm = createWorkshopLlm(env.DEV_SHOWDOWN_API_KEY, interactionId);
+				const result = await generateObject({
+					model: workshopLlm.chatModel('deli-4'),
+					schema: jsonSchema({
+						type: 'object',
+						properties: {
+							name: { type: 'string' },
+							price: { type: 'number' },
+							currency: { type: 'string' },
+							inStock: { type: 'boolean' },
+							dimensions: {
+								type: 'object',
+								properties: {
+									length: { type: 'number' },
+									width: { type: 'number' },
+									height: { type: 'number' },
+									unit: { type: 'string' },
+								},
+							},
+							manufacturer: {
+								type: 'object',
+								properties: {
+									name: { type: 'string' },
+									country: { type: 'string' },
+									website: { type: 'string' },
+								},
+							},
+							specifications: {
+								type: 'object',
+								properties: {
+									weight: { type: 'number' },
+									weightUnit: { type: 'string' },
+									warrantyMonths: { type: 'number' },
+								},
+							},
+						},
+					}),
+					prompt: payload.description,
+				});
+
+				return Response.json(result.object);
 			}
 				default:
 					return new Response('Solver not found', { status: 404 });
