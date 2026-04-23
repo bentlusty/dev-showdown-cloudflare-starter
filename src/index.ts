@@ -68,46 +68,13 @@ export default {
 					throw new Error('DEV_SHOWDOWN_API_KEY is required');
 				}
 				const workshopLlm = createWorkshopLlm(env.DEV_SHOWDOWN_API_KEY, interactionId);
-				const result = await generateObject({
+				const result = await generateText({
 					model: workshopLlm.chatModel('deli-4'),
-					schema: jsonSchema({
-						type: 'object',
-						properties: {
-							name: { type: 'string' },
-							price: { type: 'number' },
-							currency: { type: 'string' },
-							inStock: { type: 'boolean' },
-							dimensions: {
-								type: 'object',
-								properties: {
-									length: { type: 'number' },
-									width: { type: 'number' },
-									height: { type: 'number' },
-									unit: { type: 'string' },
-								},
-							},
-							manufacturer: {
-								type: 'object',
-								properties: {
-									name: { type: 'string' },
-									country: { type: 'string' },
-									website: { type: 'string' },
-								},
-							},
-							specifications: {
-								type: 'object',
-								properties: {
-									weight: { type: 'number' },
-									weightUnit: { type: 'string' },
-									warrantyMonths: { type: 'number' },
-								},
-							},
-						},
-					}),
+					system: 'Extract product data as JSON matching the example: {"name","price","currency","inStock","dimensions":{"length","width","height","unit"},"manufacturer":{"name","country","website"},"specifications":{"weight","weightUnit","warrantyMonths"}}. Use ISO currency codes and canonical unit codes (cm/in/mm, kg/lb/g). Return only the JSON object.',
 					prompt: payload.description,
 				});
 
-				return Response.json(result.object);
+				return Response.json(JSON.parse(result.text));
 			}
 				default:
 					return new Response('Solver not found', { status: 404 });
