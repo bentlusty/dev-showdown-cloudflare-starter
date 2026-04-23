@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import { generateText } from 'ai';
+import { generateObject, generateText, jsonSchema } from 'ai';
 
 const INTERACTION_ID_HEADER = 'X-Interaction-Id';
 
@@ -68,13 +68,65 @@ export default {
 					throw new Error('DEV_SHOWDOWN_API_KEY is required');
 				}
 				const workshopLlm = createWorkshopLlm(env.DEV_SHOWDOWN_API_KEY, interactionId);
-				const result = await generateText({
+				const result = await generateObject({
 					model: workshopLlm.chatModel('deli-4'),
-					system: 'Extract product data as JSON matching the example: {"name","price","currency","inStock","dimensions":{"length","width","height","unit"},"manufacturer":{"name","country","website"},"specifications":{"weight","weightUnit","warrantyMonths"}}. Use ISO currency codes and canonical unit codes (cm/in/mm, kg/lb/g). Return only the JSON object.',
+					system: [
+						'Extract product data from the description into a JSON object.',
+						'ALL fields are required — never omit any:',
+						'- name (string): full product name including model/code',
+						'- price (number)',
+						'- currency (string): ISO code (USD, EUR, GBP, JPY, CAD, AUD, SEK, NOK, DKK, BRL, CNY)',
+						'- inStock (boolean)',
+						'- dimensions: { length, width, height (numbers), unit ("cm" | "in" | "mm") }',
+						'- manufacturer: { name, country, website (strings) }',
+						'- specifications: { weight (number), weightUnit ("kg" | "lb" | "g"), warrantyMonths (number) }',
+						'Convert units and currencies to the canonical codes listed above.',
+					].join('\n'),
+					schema: jsonSchema({
+						type: 'object',
+						properties: {
+							name: { type: 'string' },
+							price: { type: 'number' },
+							currency: {
+								type: 'string',
+								enum: ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'SEK', 'NOK', 'DKK', 'BRL', 'CNY'],
+							},
+							inStock: { type: 'boolean' },
+							dimensions: {
+								type: 'object',
+								properties: {
+									length: { type: 'number' },
+									width: { type: 'number' },
+									height: { type: 'number' },
+									unit: { type: 'string', enum: ['cm', 'in', 'mm'] },
+								},
+								required: ['length', 'width', 'height', 'unit'],
+							},
+							manufacturer: {
+								type: 'object',
+								properties: {
+									name: { type: 'string' },
+									country: { type: 'string' },
+									website: { type: 'string' },
+								},
+								required: ['name', 'country', 'website'],
+							},
+							specifications: {
+								type: 'object',
+								properties: {
+									weight: { type: 'number' },
+									weightUnit: { type: 'string', enum: ['kg', 'lb', 'g'] },
+									warrantyMonths: { type: 'number' },
+								},
+								required: ['weight', 'weightUnit', 'warrantyMonths'],
+							},
+						},
+						required: ['name', 'price', 'currency', 'inStock', 'dimensions', 'manufacturer', 'specifications'],
+					}),
 					prompt: payload.description,
 				});
 
-				return Response.json(JSON.parse(result.text));
+				return Response.json(result.object);
 			}
 				default:
 					return new Response('Solver not found', { status: 404 });
